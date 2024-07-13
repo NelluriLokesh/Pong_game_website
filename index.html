@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <style>
+        body {
+            background-image: url('dee.jpg'); /* Background image */
+            background-size: cover;
+            background-repeat: no-repeat;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background-color: black;
+            display: block;
+            margin: auto;
+            margin-top: 50px;
+        }
+        #welcomeMessage {
+            text-align: center;
+            color: white;
+            font-size: 36px;
+            margin-top: 50px; /* Adjust as needed */
+        }
+        .exit-button {
+            position: absolute;
+            top: 10px; /* Adjust top position */
+            left: 10px; /* Adjust left position */
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <button class="exit-button" onclick="goBack()">Exit Game</button>
+    <canvas id="pongCanvas" width="800" height="400"></canvas>
+    <div id="welcomeMessage">
+        <p>Welcome to Pong Game</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('pongCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let score = 0;
+        let gameOver = false;
+
+        // Ball properties
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            dx: 5,
+            dy: 5,
+            radius: 10
+        };
+
+        // Paddle properties (on the left)
+        let paddle = {
+            x: 10,
+            y: canvas.height / 2 - 50,
+            width: 10,
+            height: 100,
+            dy: 10 // paddle speed
+        };
+
+        // Wall properties (top, bottom, right)
+        let wallTop = {
+            x: 0,
+            y: 0,
+            width: canvas.width,
+            height: 10
+        };
+
+        let wallBottom = {
+            x: 0,
+            y: canvas.height - 10,
+            width: canvas.width,
+            height: 10
+        };
+
+        let wallRight = {
+            x: canvas.width - 10,
+            y: 0,
+            width: 10,
+            height: canvas.height
+        };
+
+        // Middle balls (acting as stationary obstacles)
+        let middleBallTop = {
+            x: canvas.width / 2,
+            y: canvas.height / 4,
+            radius: 10
+        };
+
+        let middleBallBottom = {
+            x: canvas.width / 2,
+            y: canvas.height * 3 / 4,
+            radius: 10
+        };
+
+        // Drawing functions
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawPaddle() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+        }
+
+        function drawWall(wall) {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+        }
+
+        function drawMiddleBallTop() {
+            ctx.beginPath();
+            ctx.arc(middleBallTop.x, middleBallTop.y, middleBallTop.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawMiddleBallBottom() {
+            ctx.beginPath();
+            ctx.arc(middleBallBottom.x, middleBallBottom.y, middleBallBottom.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawScore() {
+            ctx.font = '24px Arial';
+            ctx.fillStyle = 'white';
+            ctx.fillText('Score: ' + score, 20, 30);
+        }
+
+        function drawGameOver() {
+            ctx.font = '36px Arial';
+            ctx.fillStyle = 'red';
+            ctx.fillText('Game Over', canvas.width / 2 - 100, canvas.height / 2);
+            ctx.font = '24px Arial';
+            ctx.fillStyle = 'white';
+            ctx.fillText('Press Spacebar to Restart', canvas.width / 2 - 140, canvas.height / 2 + 40);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawBall();
+            drawPaddle();
+            drawWall(wallTop);
+            drawWall(wallBottom);
+            drawWall(wallRight);
+            drawMiddleBallTop(); // Draw top middle ball
+            drawMiddleBallBottom(); // Draw bottom middle ball
+            drawScore();
+
+            if (gameOver) {
+                drawGameOver();
+                return;
+            }
+
+            // Ball movement
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Ball collision with top/bottom walls
+            if (ball.y + ball.dy > canvas.height - ball.radius || ball.y + ball.dy < ball.radius) {
+                ball.dy = -ball.dy;
+            }
+
+            // Ball collision with left wall (player's paddle)
+            if (ball.x + ball.dx < ball.radius + paddle.width) {
+                if (ball.y > paddle.y && ball.y < paddle.y + paddle.height) {
+                    ball.dx = -ball.dx;
+                    score++;
+                } else {
+                    gameOver = true;
+                }
+            }
+
+            // Ball collision with right wall (reset ball position)
+            if (ball.x + ball.dx > canvas.width - ball.radius - wallRight.width) {
+                ball.dx = -ball.dx;
+            }
+
+            // Collision detection with middle balls
+            if (detectCollision(ball, middleBallTop) || detectCollision(ball, middleBallBottom)) {
+                ball.dx = -ball.dx; // Reverse ball's horizontal direction
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = -ball.dx;
+            ball.dy = Math.random() * 10 - 5; // randomize initial vertical direction
+        }
+
+        function resetGame() {
+            score = 0;
+            gameOver = false;
+            resetBall();
+        }
+
+        // Function to detect collision between two circles
+        function detectCollision(ball1, ball2) {
+            let dx = ball1.x - ball2.x;
+            let dy = ball1.y - ball2.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < ball1.radius + ball2.radius;
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', function(event) {
+            if (event.key === ' ') {
+                if (gameOver) {
+                    resetGame();
+                    draw();
+                }
+            } else if (event.key === 'ArrowUp' && paddle.y > 0) {
+                paddle.y -= paddle.dy;
+            } else if (event.key === 'ArrowDown' && paddle.y + paddle.height < canvas.height) {
+                paddle.y += paddle.dy;
+            }
+        });
+
+        // Go back function
+        function goBack() {
+            window.history.back();
+        }
+
+        // Start the game
+        draw();
+    </script>
+</body>
+</html>
